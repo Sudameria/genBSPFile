@@ -6,7 +6,7 @@ rmdir /S /Q dist
 del *.spec
 
 REM Ejecutar PyInstaller para crear un ejecutable standalone
-pyinstaller --onefile gen.py
+pyinstaller --onefile --add-data "ciasAereas.py;." gen.py
 
 REM Mensaje de éxito
 echo Ejecutable creado en la carpeta dist

@@ -3,6 +3,7 @@ import os
 import sys
 from datetime import datetime
 import warnings
+import ciasAereas
 
 # Suprimir warnings específicos de openpyxl
 warnings.filterwarnings("ignore", category=UserWarning, module='openpyxl')
@@ -11,33 +12,11 @@ def esperar_tecla():
     input("Presiona cualquier tecla para continuar...")
 
 def convertir_fila_a_bsp(row, f):
-    if isinstance(row["Fecha"], datetime):
-        fecha = row["Fecha"]
-    else:
-        fecha = datetime.strptime(row["Fecha"], "%m/%d/%Y")
-    
-    fecha_formateada = fecha.strftime("%d%m%y")
+    ignore = False
 
-    tipo_servicio = row["Tipo de Servicio"]
-    service = "ISSUES"
 
-    if tipo_servicio == "Air Ticket":
-        tipo_boleto = "TKTT"
-    elif tipo_servicio == "Debit Memo":
-        tipo_boleto = "DM"
-        service = "DEBIT MEMOS"
-    elif tipo_servicio == "Credit Memo":
-        tipo_boleto = "CM"
-        service = "CREDIT MEMOS"
-    elif tipo_servicio == "Exchange":
-        tipo_boleto = "EX"
-    elif tipo_servicio == "Refund":
-        tipo_boleto = "RF"
-        service = "REFUNDS" 
-    else:
-        tipo_boleto = "OT"
 
-    def convert_to_bsp(value):
+    def convert_to_bsp(value, length=12):
         if isinstance(value, (int, float)):
             value = str(value)
         elif isinstance(value, str):
@@ -45,41 +24,117 @@ def convertir_fila_a_bsp(row, f):
         else:
             value = "0"
         try:
-            return f"{float(value):.2f}".replace('.', '') 
+            return f"{float(value):.2f}".replace('.', '').rjust(length, '0') 
         except ValueError:
-            return "0".ljust(12, '0') 
+            return "0".rjust(length, '0')
 
+
+
+
+    codigo_aerea = row['Aerolínea'] 
+    
+    if pd.isna(codigo_aerea) or codigo_aerea is None:
+        codigo_aerea = 'X1'
+       
+    try:
+        cia_aerea = ciasAereas.obtener_codigo_numerico(codigo_aerea)
+    except ValueError as e:
+        print(e)
+        cia_aerea = '995' 
+
+    iata = "10638390"
+    origen = "AGTDSTI".ljust(8)
+    
+    tipo_doc = ""
+    clase = ""
+    
+    tipo_servicio = row["Tipo de Servicio"]
+    service = "ISSUES"
+    if tipo_servicio == "Air Extra": #En el TXT lo tengo como EMDA
+        tipo_doc = "ISSUE"
+        clase = "EMDA" 
+    elif tipo_servicio == "GRP Deposit":
+        tipo_doc = "ISSUE"
+        clase = "EMDA" 
+    elif tipo_servicio == "Air Ticket":
+        tipo_doc = "ISSUE"
+        clase = "TKTT" 
+    elif tipo_servicio == "Debit Memo":
+        tipo_doc = "DEBIT MEMOS"
+        clase = "ADMA" 
+    elif tipo_servicio == "Credit Memo":
+        tipo_doc = "CREDIT MEMOS"
+        clase = "ACMA" 
+    elif tipo_servicio == "Exchange":
+        tipo_doc = "ISSUE"
+        clase = "TKTT" 
+    elif tipo_servicio == "Refund":
+        tipo_doc = "REFUNDS"
+        clase = "RFND" 
+    elif tipo_servicio == "Wire Transfer Received":
+        ignore = True
+    else: #Vacio/Grupo y Grupos
+        tipo_doc = "ISSUE"
+        clase = "TKTT" 
+    
+    boleto = str(row['Ticket/Rsv #'])[:10].ljust(10)
+    if not row['Ticket/Rsv #']:
+        ignore = True
+    
+    dv = "9" #No se de donde sale el dv
+   
+    
+    
+    
+    
+    
+    if pd.isna(row["Fecha"]):
+        fecha = datetime.now()  # O puedes establecer una fecha por defecto
+    else:
+        if isinstance(row["Fecha"], datetime):
+            fecha = row["Fecha"]
+        else:
+            try:
+                fecha = datetime.strptime(row["Fecha"], "%m/%d/%Y")
+            except ValueError:
+                print(f"Formato de fecha inválido en la fila {index}. Se usará la fecha actual.")
+                fecha = datetime.now()
+    emision = fecha.strftime("%y%m%d")
+        
+   
+    cpns = "FFVV"
+    currency = "USD2"
+    
+    
     total_fare = convert_to_bsp(row['Total Fare USD'])
-    service_fee = convert_to_bsp(row['Service Fee'])
     total_descuento = convert_to_bsp(row['Total a Descontar'])
-
-    line1 = (
-        f"DET{str(row['Ticket/Rsv #'])[:10].zfill(12)}FLGXBSP {service.ljust(20)}",
-        f"{tipo_boleto}{str(row['Ticket/Rsv #'])[:10].ljust(10)}{fecha_formateada}",
-        f"FFVVUSD{total_fare.ljust(12, '0')}{service_fee.ljust(12, '0')}0000000000000000000000000000000000000000000000000000000000000000000000000000",
-        f"{total_descuento.ljust(12, '0')}000000000000000000000000I00000000000000000000000000Q"
-    )
-    f.write(''.join(line1) + '\n')
-
-    if tipo_servicio in ["Air Ticket", "Exchange"]:
-        line2 = (
-            f"TAX{str(row['Ticket/Rsv #'])[:10].zfill(12)}FLGXBSP {service.ljust(20)}",
-            f"{tipo_boleto}{str(row['Ticket/Rsv #'])[:10].ljust(10)}",
-            f"XFBNA{convert_to_bsp(row['Total Fare USD'])}",
-            f"XFMIA{convert_to_bsp(row['Service Fee'])}",
-            f"XF00000000000ZP00000000000AY00000000000US00000000000"
+    
+    
+    tarifa = "TARIFA".rjust(12, '0')
+    porc_comision = "COM".rjust(4, '0')
+    importe_comision = "IMPCOM".rjust(11, '0')
+    porc_over = "PCOV".rjust(4, '0')
+    importe_over = "IMPOV".rjust(11, '0')
+    a_pagar = "APAG".rjust(12, '0')
+    tax = "TAX".rjust(11, '0')
+    fees = convert_to_bsp(row['Service Fee'],11) #Ver si son 11 o 12
+    penalidad = "PENALIDAD".rjust(11, '#')
+    
+    tipo_de_ruta = "I"
+    cash = "CASH".rjust(12, '0')
+    uatp = "UATP".rjust(10, '0')
+    refound = ""
+    if tipo_doc == "REFOUNDS":
+        refound = boleto
+    
+    if ignore == False:
+        line1 = (
+            f"DET{cia_aerea}{iata}{origen}{tipo_doc.ljust(20)}{clase.ljust(4)}",
+            f"{boleto}{dv}{emision}{cpns}{currency}",
+            f"{tarifa}{porc_comision}{importe_comision}{porc_over}{importe_over}{a_pagar}{tax}{fees}{penalidad}",
+            f"{tipo_de_ruta}{cash}{uatp}{boleto}{refound}",
         )
-        f.write(''.join(line2) + '\n')
-
-    if tipo_servicio == "Refund":
-        line2 = (
-            f"TAX{str(row['Ticket/Rsv #'])[:10].zfill(12)}FLGXBSP {service.ljust(20)}",
-            f"RF{str(row['Ticket/Rsv #'])[:10].ljust(10)}",
-            f"XFBNA{convert_to_bsp(row['Total Fare USD'])}",
-            f"XFMIA{convert_to_bsp(row['Service Fee'])}",
-            f"XF00000000000ZP00000000000AY00000000000US00000000000"
-        )
-        f.write(''.join(line2) + '\n')
+        f.write(''.join(line1) + '\n')
 
 
 # Parámetro
