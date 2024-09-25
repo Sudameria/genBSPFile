@@ -5,7 +5,6 @@ from datetime import datetime
 import warnings
 import ciasAereas
 
-# Suprimir warnings específicos de openpyxl
 warnings.filterwarnings("ignore", category=UserWarning, module='openpyxl')
 
 def esperar_tecla():
@@ -14,8 +13,6 @@ def esperar_tecla():
 def convertir_fila_a_bsp(row, f):
     ignore = False
 
-
-
     def convert_to_bsp(value, length=12):
         if isinstance(value, (int, float)):
             value = str(value)
@@ -23,7 +20,6 @@ def convertir_fila_a_bsp(row, f):
             value = value.replace(',', '.')
         else:
             value = "0"
-
         try:
             num_value = float(value)
             is_negative = num_value < 0
@@ -54,7 +50,6 @@ def convertir_fila_a_bsp(row, f):
     clase = ""
     
     tipo_servicio = row["Tipo de Servicio"]
-    service = "ISSUES"
     if tipo_servicio == "Air Extra": #En el TXT lo tengo como EMDA
         tipo_doc = "ISSUE"
         clase = "EMDA" 
@@ -87,12 +82,7 @@ def convertir_fila_a_bsp(row, f):
         ignore = True
     
     dv = "9" #No se de donde sale el dv
-   
-    
-    
-    
-    
-    
+           
     if pd.isna(row["Fecha"]):
         fecha = datetime.now()  # O puedes establecer una fecha por defecto
     else:
@@ -106,7 +96,6 @@ def convertir_fila_a_bsp(row, f):
                 fecha = datetime.now()
     emision = fecha.strftime("%y%m%d")
         
-   
     cpns = "FFVV"
     currency = "USD2"
     tarifa = convert_to_bsp(row['Fare Basis'],12)
@@ -122,9 +111,7 @@ def convertir_fila_a_bsp(row, f):
     
     #fara basis = tarifa
     
-    
     tipo_de_ruta = "I"
-
     
     fare_basis_p = row['Fare Basis'] if pd.notna(row['Fare Basis']) else 0
     tax_p = row['Tax'] if pd.notna(row['Tax']) else 0
@@ -152,7 +139,6 @@ def convertir_fila_a_bsp(row, f):
             f"{char5}{tipo_de_ruta}{char31}{cash}{uatp}{char5}{refound}",
         )
         f.write(''.join(line1) + '\n')
-
 
 # Parámetro
 if len(sys.argv) > 1:
