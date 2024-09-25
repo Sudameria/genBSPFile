@@ -23,13 +23,18 @@ def convertir_fila_a_bsp(row, f):
             value = value.replace(',', '.')
         else:
             value = "0"
+
         try:
-            return f"{float(value):.2f}".replace('.', '').rjust(length, '0') 
+            num_value = float(value)
+            is_negative = num_value < 0
+            num_value = abs(num_value)
+            bsp_value = f"{num_value:.2f}".replace('.', '')
+            bsp_value = bsp_value.rjust(length, '0')
+            if is_negative:
+                bsp_value = '-' + bsp_value[1:]
+            return bsp_value
         except ValueError:
             return "0".rjust(length, '0')
-
-
-
 
     codigo_aerea = row['Aerolínea'] 
     
@@ -78,7 +83,7 @@ def convertir_fila_a_bsp(row, f):
         clase = "TKTT" 
     
     boleto = str(row['Ticket/Rsv #'])[:10].ljust(10)
-    if not row['Ticket/Rsv #']:
+    if not row['Ticket/Rsv #'] or pd.isna(row['Ticket/Rsv #']):
         ignore = True
     
     dv = "9" #No se de donde sale el dv
@@ -104,35 +109,47 @@ def convertir_fila_a_bsp(row, f):
    
     cpns = "FFVV"
     currency = "USD2"
+    tarifa = convert_to_bsp(row['Fare Basis'],12)
+
+    porc_comision = "".rjust(4, '0')
+    importe_comision = "".rjust(11, '0')
+    porc_over = "".rjust(4, '0')
+    importe_over = "".rjust(11, '0')
+    a_pagar = "".rjust(12, '0')
+    tax = convert_to_bsp(row['Tax'],11)
+    fees = "".rjust(11, '0')
+    penalidad = "".rjust(11, '0')
     
+    #fara basis = tarifa
     
-    total_fare = convert_to_bsp(row['Total Fare USD'])
-    total_descuento = convert_to_bsp(row['Total a Descontar'])
-    
-    
-    tarifa = "TARIFA".rjust(12, '0')
-    porc_comision = "COM".rjust(4, '0')
-    importe_comision = "IMPCOM".rjust(11, '0')
-    porc_over = "PCOV".rjust(4, '0')
-    importe_over = "IMPOV".rjust(11, '0')
-    a_pagar = "APAG".rjust(12, '0')
-    tax = "TAX".rjust(11, '0')
-    fees = convert_to_bsp(row['Service Fee'],11) #Ver si son 11 o 12
-    penalidad = "PENALIDAD".rjust(11, '#')
     
     tipo_de_ruta = "I"
-    cash = "CASH".rjust(12, '0')
-    uatp = "UATP".rjust(10, '0')
+
+    
+    fare_basis_p = row['Fare Basis'] if pd.notna(row['Fare Basis']) else 0
+    tax_p = row['Tax'] if pd.notna(row['Tax']) else 0
+
+    # Convertir ambos valores a float antes de sumarlos
+    try:
+        cash = float(fare_basis_p) + float(tax_p)
+    except ValueError:
+        cash = 0
+
+    cash = convert_to_bsp(cash, 11)
+    
+    uatp = "".rjust(12, '0')
     refound = ""
-    if tipo_doc == "REFOUNDS":
+    char31 = "".rjust(31, ' ')
+    char5 = "".rjust(5, ' ')
+    if tipo_doc == "REFUNDS":
         refound = boleto
     
     if ignore == False:
         line1 = (
             f"DET{cia_aerea}{iata}{origen}{tipo_doc.ljust(20)}{clase.ljust(4)}",
             f"{boleto}{dv}{emision}{cpns}{currency}",
-            f"{tarifa}{porc_comision}{importe_comision}{porc_over}{importe_over}{a_pagar}{tax}{fees}{penalidad}",
-            f"{tipo_de_ruta}{cash}{uatp}{boleto}{refound}",
+            f"{tarifa}{porc_comision}0{importe_comision}{porc_over}0{importe_over}{char5}{char5}{char5}0{a_pagar}{char5}{char5}0{tax}{fees}{penalidad}",
+            f"{char5}{tipo_de_ruta}{char31}{cash}{uatp}{char5}{refound}",
         )
         f.write(''.join(line1) + '\n')
 
@@ -141,7 +158,14 @@ def convertir_fila_a_bsp(row, f):
 if len(sys.argv) > 1:
     xls_file = sys.argv[1]
 else:
-    xls_file = 'origen.xls'
+    if os.path.isfile('origen.xlsx'):
+        xls_file = 'origen.xlsx'
+    elif os.path.isfile('origen.xls'):
+        xls_file = 'origen.xls'
+    else:
+        print("Error: No se encontró ni 'origen.xlsx' ni 'origen.xls'.")
+        esperar_tecla()
+        sys.exit(1)
 
 print(f'Leyendo archivo XLS: {xls_file}...')
 
@@ -159,7 +183,7 @@ except Exception as e:
     sys.exit(1)
 
 fecha_actual = datetime.now().strftime("%Y%m%d")
-txt_file = f'destino_{fecha_actual}.txt'
+txt_file = f'US_MIAGTXNDET_10638390_{fecha_actual}.TXT'
 
 with open(txt_file, 'w') as f:
     for sheet_name, df in dfs.items():
@@ -174,4 +198,4 @@ with open(txt_file, 'w') as f:
                     print(f"Error al procesar la fila {index} en la hoja '{sheet_name}': {e}")
 
 print(f'Archivo TXT generado: {txt_file}')
-esperar_tecla()
+#esperar_tecla()

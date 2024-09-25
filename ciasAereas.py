@@ -1,5 +1,3 @@
-# ciasAereas.py
-
 cias_aereas = {
     "AA": 1,
     "AC": 14,
