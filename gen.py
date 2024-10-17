@@ -99,9 +99,10 @@ def convertir_fila_a_bsp(row, f):
     cpns = "FFVV"
     currency = "USD2"
     tarifa = convert_to_bsp(row['Fare Basis'],12)
+    
 
     porc_comision = "".rjust(4, '0')
-    importe_comision = "".rjust(11, '0')
+    importe_comision = convert_to_bsp(row['Total Com. Aerea/Hotel'],11)
     porc_over = "".rjust(4, '0')
     importe_over = "".rjust(11, '0')
     a_pagar = "".rjust(12, '0')
