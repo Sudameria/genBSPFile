@@ -3,21 +3,17 @@
 #                        Script STI -> Sudameria                        #
 #                                                                       #
 #########################################################################
+
+# Variables
 $carpetaAmadeus = "C:\Server Folder\Company Data\Amadeus Interface -AIR\"
 $carpetaSabre = "C:\Server Folder\Company Data\Sabre Interface\"
 $carpetaCopiados = "C:\SudameriaInterface\Copiados"
 $carpetaProcesados = "C:\SudameriaInterface\Procesados"
-
 $ftpUrl = "ftp://190.210.238.29"
-$ftpUsuario = "SudameriaFTP"
-$ftpClave = "SudaT001"
-
-#$ftpUrl = "ftp://185.245.180.36"
-#$ftpUsuario = "pnr@sudameria.com"
-#$ftpClave = "ysszhi9Wp2E="
+$ftpUsuario = "sudameriaftp"
+$ftpClave = "sudat001"
 
 $identificadorSudameria = "0010009214"
-
 
 function Verify-Folder {
     param (

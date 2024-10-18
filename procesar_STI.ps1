@@ -41,15 +41,15 @@ function Is-Amadeus {
     param (
         [string]$filePath
     )
-
-    # Validación para asegurarse de que filePath no esté vacío
     if (-not [string]::IsNullOrWhiteSpace($filePath) -and (Test-Path $filePath)) {
-        # Leer la primera línea del archivo
-        $firstLine = Get-Content -Path $filePath -TotalCount 1
-
-        # Verificar si la primera línea comienza con "AIR-"
-        if ($firstLine -match "^AIR-") {
-            return $true
+        try {
+            $firstLine = Get-Content -Path $filePath -TotalCount 1
+            if ($firstLine -match "^AIR-") {
+                return $true
+            }
+        }
+        catch {
+            Write-Host "Error leyendo el archivo: $filePath. Detalles: $_"
         }
     }
     return $false
@@ -59,19 +59,20 @@ function Is-Sabre {
     param (
         [string]$filePath
     )
-    
-    # Validación para asegurarse de que filePath no esté vacío
     if (-not [string]::IsNullOrWhiteSpace($filePath) -and (Test-Path $filePath)) {
-        # Leer la primera línea del archivo
-        $firstLine = Get-Content -Path $filePath -TotalCount 1
-
-        # Verificar si la primera línea comienza con "AA"
-        if ($firstLine -match "^AA") {
-            return $true
+        try {
+            $firstLine = Get-Content -Path $filePath -TotalCount 1
+            if ($firstLine -match "^AA") {
+                return $true
+            }
+        }
+        catch {
+            Write-Host "Error leyendo el archivo: $filePath. Detalles: $_"
         }
     }
     return $false
 }
+
 
 function Process-Files {
     param (
@@ -83,16 +84,22 @@ function Process-Files {
     $archivos = Get-ChildItem -Path $OriginFolder
 
     foreach ($archivo in $archivos) {
-        $filePath = $archivo.FullName  # Obtener la ruta completa del archivo
+        # Verificar si el elemento es un archivo, no una carpeta
+        if ($archivo.PSIsContainer) {
+            Write-Host "Saltando carpeta: $($archivo.FullName)"
+            continue
+        }
+
+        $filePath = $archivo.FullName 
         
         if (Is-Amadeus -filePath $filePath) {
             Process-Amadeus-Files -archivo $filePath
-            Move-Item -Path $filePath -Destination $AmadeusFolder
+            Move-Item -Path $filePath -Destination $AmadeusFolder -Force
             Write-Host "Procesado y movido (Amadeus): $($archivo.Name)"
         }
         elseif (Is-Sabre -filePath $filePath) {
             Process-Sabre-Files -archivo $filePath
-            Move-Item -Path $filePath -Destination $SabreFolder
+            Move-Item -Path $filePath -Destination $SabreFolder -Force
             Write-Host "Procesado y movido (Sabre): $($archivo.Name)"
         }
         else {
@@ -103,12 +110,12 @@ function Process-Files {
 
 Write-Host "Procesando PNRs"
 
-# Verificar si las carpetas existen, si no crearlas
+# Verifico carpetas
 Verify-Folder $OriginFolder
 Verify-Folder $AmadeusFolder
 Verify-Folder $SabreFolder
 
-# Procesar los archivos
+# Acá empiezo a procesar
 Process-Files -OriginFolder $OriginFolder -AmadeusFolder $AmadeusFolder -SabreFolder $SabreFolder
 
 Write-Host "Proceso completado."
