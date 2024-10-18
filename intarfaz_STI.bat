@@ -1,0 +1,1 @@
+powershell.exe -ExecutionPolicy Bypass -File "C:\SudameriaInterface\interfaz_STI.ps1" -WindowStyle Hidden
