@@ -19,23 +19,55 @@ function Verify-Folder {
     }
 }
 
+
 function Process-Amadeus-Files {
     param (
         [string]$archivo
     )
     $contenido = Get-Content -Path $archivo
-    $contenidoModificado = $contenido -replace "FPCC", "FPCASH"
+    $contenidoModificado = $contenido | ForEach-Object {
+        if ($_ -match "FPCC") {
+            "FPCASH"
+        }
+        else {
+            $_
+        }
+    }
     Set-Content -Path $archivo -Value $contenidoModificado
 }
+
+
+#function Process-Amadeus-Files {
+#    param (
+#        [string]$archivo
+#    )
+#    $contenido = Get-Content -Path $archivo
+#    $contenidoModificado = $contenido -replace "FPCC", "FPCASH"
+#    Set-Content -Path $archivo -Value $contenidoModificado
+#}
+
+
 
 function Process-Sabre-Files {
     param (
         [string]$archivo
     )
     $contenido = Get-Content -Path $archivo
-    $contenidoModificado = $contenido -replace "/CC", "/CA"
+    $contenidoModificado = $contenido | ForEach-Object {
+        $_ -replace "/CC\S+", "/CA"
+    }
     Set-Content -Path $archivo -Value $contenidoModificado
 }
+
+
+#function Process-Sabre-Files {
+#    param (
+#        [string]$archivo
+#    )
+#    $contenido = Get-Content -Path $archivo
+#    $contenidoModificado = $contenido -replace "/CC", "/CA"
+#    Set-Content -Path $archivo -Value $contenidoModificado
+#}
 
 function Is-Amadeus {
     param (
