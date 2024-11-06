@@ -116,7 +116,7 @@ function Process-Files {
     $archivos = Get-ChildItem -Path $OriginFolder
 
     foreach ($archivo in $archivos) {
-        # Verificar si el elemento es un archivo, no una carpeta
+        # Me fijo si es archivo o carpeta
         if ($archivo.PSIsContainer) {
             Write-Host "Saltando carpeta: $($archivo.FullName)"
             continue
@@ -124,6 +124,13 @@ function Process-Files {
 
         $filePath = $archivo.FullName 
         
+        if (Is-Sabre -filePath $filePath -and $archivo.Extension -eq ".txt") {
+            $nuevoNombre = [System.IO.Path]::ChangeExtension($filePath, ".PNR")
+            Rename-Item -Path $filePath -NewName $nuevoNombre
+            $filePath = $nuevoNombre
+            Write-Host "Cambio extensión a archivo Sabre: $($archivo.Name)"
+        }
+
         if (Is-Amadeus -filePath $filePath) {
             Process-Amadeus-Files -archivo $filePath
             Move-Item -Path $filePath -Destination $AmadeusFolder -Force
@@ -139,6 +146,7 @@ function Process-Files {
         }
     }
 }
+
 
 Write-Host "Procesando PNRs"
 
