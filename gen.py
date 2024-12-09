@@ -106,7 +106,7 @@ def convertir_fila_a_bsp(row, f):
     porc_over = "".rjust(4, '0')
     importe_over = "".rjust(11, '0')
     a_pagar = "".rjust(12, '0')
-    tax = convert_to_bsp(row['Tax'],11)
+    tax = convert_to_bsp(row['Tax'] if pd.notna(row['Tax']) and row['Tax'] != "" else 0, 11)
     fees = "".rjust(11, '0')
     penalidad = "".rjust(11, '0')
     
